@@ -4,13 +4,19 @@ on:
   schedule:
     - cron: '*/3 * * * *'
   workflow_dispatch:
+  push:
+    branches: [ main ]
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required to commit cache files
+    
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Needed for git history
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -23,25 +29,17 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run bot
-        id: run_bot
         env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+          TELEGRAM_BOT_TOKEN: \${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: \${{ secrets.TELEGRAM_CHAT_ID }}
+          WEBHOOK_SECRET: \${{ secrets.WEBHOOK_SECRET }}
         run: |
           python start.py
 
-      - name: Handle API Failure
-        if: failure()
+      - name: Commit state
         run: |
-          python -c "from src.telegram import TelegramBot; import os; TelegramBot(os.getenv('TELEGRAM_BOT_TOKEN'), os.getenv('TELEGRAM_CHAT_ID')).send_error('Binance API failed. Retrying in 5m.')"
-          sleep 300
-          exit 1
-
-      - name: Commit Active Trades and History
-        run: |
-          git config --global user.email "bot@github.com"
           git config --global user.name "GitHub Actions Bot"
-          git add .cache/active_trades.json .cache/signal_cache.json .cache/strategy_history.json || true
-          git commit -m "Update active trades and history [skip ci]" || true
-          git push || true
+          git config --global user.email "bot@github.com"
+          git add .cache/
+          git diff --quiet && git diff --staged --quiet || \
+            (git commit -m "Update cache [skip ci]" && git push)
