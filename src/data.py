@@ -23,6 +23,7 @@ def fetch_klines(symbol, interval, limit=200):
         df.set_index("open_time", inplace=True)
         return df
     except Exception as e:
+        print(f"Error fetching data for {symbol}-{interval}: {e}")
         return None
 
 def fetch_all_data(symbols, timeframes):

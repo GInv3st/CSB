@@ -90,6 +90,9 @@ def main():
                     "candles_to_win": exit_info.get('candles_to_win', None)
                 })
 
+        print(f"Fetched data for {len(data)} symbols/timeframes.")
+        print(f"Number of signals generated: {len(signals)}")
+
     except Exception as e:
         err = traceback.format_exc()
         tg.send_error(f"Bot error:\n{err}")
