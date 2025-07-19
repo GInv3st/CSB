@@ -1,0 +1,48 @@
+name: Crypto Signal Bot
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: '*/3 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: python -c "
+          from src.telegram import TelegramBot;
+          import os;
+          print('TEST: Attempting to send Telegram message');
+          try:
+            bot = TelegramBot(os.getenv('TELEGRAM_BOT_TOKEN'), os.getenv('TELEGRAM_CHAT_ID'));
+            bot.send_signal({
+              'symbol': 'TEST',
+              'timeframe': '1m',
+              'side': 'LONG',
+              'entry': 100.0,
+              'sl': 99.0,
+              'tp': [101.0, 102.0],
+              'strategy': 'WORKFLOW_TEST',
+              'confidence': 0.95,
+              'momentum_cat': 'HIGH',
+              'slno': '00'
+            })
+            print('TEST: Telegram message sent')
+          except Exception as e:
+            print(f'TEST FAILED: {str(e)}')
+            raise
+        "
+        env:
+          TELEGRAM_BOT_TOKEN: \${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: \${{ secrets.TELEGRAM_CHAT_ID }}
